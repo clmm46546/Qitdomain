@@ -17,6 +17,8 @@ Save that value privately. In PowerShell window 1, set it and start the server:
 
 ```powershell
 $env:LICENSE_ADMIN_TOKEN = 'paste-the-generated-token-here'
+$env:PORT = '8787'
+$env:LICENSE_HOST = '127.0.0.1'
 npm --prefix .\license-server start
 ```
 
@@ -61,7 +63,8 @@ The local URL is for development only. Before distributing the extension:
 1. Deploy `license-server` as a single server instance behind HTTPS/TLS
    termination, on a host that provides persistent disk storage. Set
    `LICENSE_ADMIN_TOKEN` to a new random value (at least 32 bytes),
-   `LICENSE_HOST=0.0.0.0`, and `LICENSE_DATA_FILE` to a persistent path.
+   `LICENSE_HOST=0.0.0.0`, `PORT=8080` (matching the Railway target port),
+   and `LICENSE_DATA_FILE` to a persistent path.
 2. Set `apiBaseUrl` in `license-config.js` to the server's HTTPS URL.
 3. Replace the localhost entry in `host_permissions` in `manifest.json` with
    `https://your-license-host.example/*`, then reload and distribute the

@@ -287,8 +287,8 @@ async function main() {
     adminToken: process.env.LICENSE_ADMIN_TOKEN,
     dataFile: process.env.LICENSE_DATA_FILE || defaultDataFile,
   });
-  const port = Number(process.env.PORT || 8787);
-  const host = process.env.LICENSE_HOST || "127.0.0.1";
+  const port = Number(process.env.PORT || 8080);
+  const host = process.env.LICENSE_HOST || "0.0.0.0";
   if (!Number.isInteger(port) || port < 0 || port > 65535) {
     throw new Error("PORT must be an integer between 0 and 65535.");
   }
