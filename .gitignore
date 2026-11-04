@@ -1,0 +1,3 @@
+license-server/data/licenses.json
+license-server/data/*.tmp
+node_modules/
