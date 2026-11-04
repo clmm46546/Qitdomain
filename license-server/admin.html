@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Quản lý license</title>
+    <link rel="stylesheet" href="/admin.css">
+    <script src="/admin.js" defer></script>
+  </head>
+  <body>
+    <main class="page">
+      <header class="page-header">
+        <div>
+          <p class="eyebrow">Qitdomain</p>
+          <h1>Quản lý license</h1>
+          <p class="muted">Tạo, tạm khóa, mở lại hoặc xóa mềm license khách hàng.</p>
+        </div>
+        <button id="logout" class="button secondary" type="button" hidden>Đăng xuất</button>
+      </header>
+
+      <p id="message" class="message" role="status" hidden></p>
+
+      <section id="login-panel" class="panel">
+        <h2>Đăng nhập quản trị</h2>
+        <p class="muted">Nhập LICENSE_ADMIN_TOKEN trong Railway → Variables. Token chỉ được giữ trong bộ nhớ tab này.</p>
+        <form id="login-form" class="form-row">
+          <label class="field grow">
+            <span>Admin token</span>
+            <input id="admin-token" type="password" autocomplete="current-password" required>
+          </label>
+          <button class="button primary" type="submit">Đăng nhập</button>
+        </form>
+      </section>
+
+      <section id="dashboard" hidden>
+        <section class="panel">
+          <h2>Tạo license mới</h2>
+          <form id="create-form" class="create-grid">
+            <label class="field">
+              <span>Tên khách hàng / ghi chú</span>
+              <input id="customer-note" type="text" maxlength="250" placeholder="Ví dụ: Nguyễn Văn A" required>
+            </label>
+            <label class="field">
+              <span>Số thiết bị</span>
+              <input id="max-devices" type="number" min="1" max="100" value="1" required>
+            </label>
+            <button class="button primary create-button" type="submit">Tạo key</button>
+          </form>
+          <div id="new-key" class="key-result" hidden>
+            <strong>Key mới — hãy sao chép và gửi cho khách, key đầy đủ chỉ hiện lần này:</strong>
+            <div class="key-copy-row">
+              <code id="new-key-value"></code>
+              <button id="copy-key" class="button secondary" type="button">Sao chép</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="list-header">
+            <div>
+              <h2>Danh sách license</h2>
+              <p class="muted">Key chỉ hiển thị 4 ký tự cuối; dùng ghi chú để nhận diện khách.</p>
+            </div>
+            <button id="refresh" class="button secondary" type="button">Làm mới</button>
+          </div>
+          <div id="license-list" class="license-list"></div>
+        </section>
+      </section>
+    </main>
+  </body>
+</html>

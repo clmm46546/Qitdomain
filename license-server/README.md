@@ -27,7 +27,23 @@ In PowerShell window 2, set the same token before running the admin commands
 below. Load the extension in Chrome/Edge and enter a key created through the
 admin API. License data is written to `license-server/data/licenses.json`.
 
-## Create, list, and revoke licenses
+## Admin dashboard
+
+Open `https://your-license-host.example/admin` to manage licenses. Enter the
+`LICENSE_ADMIN_TOKEN` when prompted. The dashboard keeps it only in page memory
+and sends it to the server over HTTPS; it is not saved in browser storage or
+included in the extension.
+
+Create a license with a customer name/note so it is easy to identify later.
+The full key is shown only once when created; save it and send it to the
+customer. Existing full keys cannot be recovered because only their SHA-256
+hashes are stored.
+
+The dashboard can temporarily suspend and resume a license. Its delete action
+is a soft delete: access is disabled but the record is retained and can be
+restored. A license that has expired remains unusable even if restored.
+
+## Create, list, and revoke licenses from PowerShell
 
 Create a license (omit `expiresAt` for a license without a set expiry):
 
@@ -84,6 +100,10 @@ extension code.
 - `POST /v1/admin/licenses` — create a license. Admin bearer token required.
 - `GET /v1/admin/licenses` — list license status and device counts.
 - `POST /v1/admin/licenses/:id/revoke` — revoke a license immediately.
+- `POST /v1/admin/licenses/:id/suspend` — temporarily block a license.
+- `POST /v1/admin/licenses/:id/resume` — reactivate a suspended license.
+- `POST /v1/admin/licenses/:id/delete` — soft-delete and block a license.
+- `POST /v1/admin/licenses/:id/restore` — restore a soft-deleted or revoked license.
 - `POST /v1/admin/licenses/:id/reset-devices` — free all device activations.
 - `POST /v1/activate` — activate a key on a device.
 - `POST /v1/verify` — check that the key and device remain active.

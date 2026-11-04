@@ -30,6 +30,20 @@ function sendJson(response, status, value) {
   response.end(JSON.stringify(value));
 }
 
+async function sendAdminAsset(response, filename, contentType) {
+  const contents = await readFile(new URL(filename, import.meta.url));
+  response.writeHead(200, {
+    "Cache-Control": "no-store",
+    "Content-Security-Policy":
+      "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
+    "Content-Type": contentType,
+    "Referrer-Policy": "no-referrer",
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+  });
+  response.end(contents);
+}
+
 async function readJsonBody(request) {
   if (!request.headers["content-type"]?.toLowerCase().startsWith("application/json")) {
     throw new HttpError(415, "UNSUPPORTED_MEDIA_TYPE", "Yêu cầu phải có Content-Type application/json.");
@@ -69,6 +83,9 @@ function requireLicenseInput(body) {
 }
 
 function publicLicenseResult(license, deviceId) {
+  if (license?.status === "suspended") {
+    throw new HttpError(403, "LICENSE_SUSPENDED", "License đang tạm khóa.");
+  }
   if (!license || license.status !== "active") {
     throw new HttpError(403, "LICENSE_REVOKED", "License không hoạt động hoặc đã bị thu hồi.");
   }
@@ -137,6 +154,15 @@ export async function createLicenseServer({ adminToken, dataFile = defaultDataFi
 
   async function handle(request, response) {
     const url = new URL(request.url, "http://localhost");
+    if (request.method === "GET" && ["/admin", "/admin/"].includes(url.pathname)) {
+      return sendAdminAsset(response, "./admin.html", "text/html; charset=utf-8");
+    }
+    if (request.method === "GET" && url.pathname === "/admin.js") {
+      return sendAdminAsset(response, "./admin.js", "text/javascript; charset=utf-8");
+    }
+    if (request.method === "GET" && url.pathname === "/admin.css") {
+      return sendAdminAsset(response, "./admin.css", "text/css; charset=utf-8");
+    }
     if (request.method === "GET" && url.pathname === "/health") {
       return sendJson(response, 200, { ok: true });
     }
@@ -225,6 +251,42 @@ export async function createLicenseServer({ adminToken, dataFile = defaultDataFi
       return sendJson(response, 200, { ok: true, id: license.id, status: license.status });
     }
 
+    const statusActionMatch = url.pathname.match(
+      /^\/v1\/admin\/licenses\/([0-9a-f-]{36})\/(suspend|resume|delete|restore)$/i,
+    );
+    if (request.method === "POST" && statusActionMatch) {
+      const license = database.licenses.find((entry) => entry.id === statusActionMatch[1]);
+      if (!license) throw new HttpError(404, "LICENSE_NOT_FOUND", "Không tìm thấy license.");
+
+      const action = statusActionMatch[2].toLowerCase();
+      if (action === "suspend") {
+        if (license.status === "deleted" || license.status === "revoked") {
+          throw new HttpError(409, "LICENSE_NOT_ACTIVE", "Không thể tạm khóa license đã xóa hoặc thu hồi.");
+        }
+        license.status = "suspended";
+        license.suspendedAt = new Date().toISOString();
+      } else if (action === "resume") {
+        if (license.status !== "suspended") {
+          throw new HttpError(409, "LICENSE_NOT_SUSPENDED", "License không ở trạng thái tạm khóa.");
+        }
+        license.status = "active";
+        delete license.suspendedAt;
+      } else if (action === "delete") {
+        license.status = "deleted";
+        license.deletedAt = new Date().toISOString();
+      } else {
+        if (license.status !== "deleted" && license.status !== "revoked") {
+          throw new HttpError(409, "LICENSE_NOT_DELETED", "License chưa bị xóa hoặc thu hồi.");
+        }
+        license.status = "active";
+        delete license.deletedAt;
+        delete license.revokedAt;
+      }
+
+      await persist();
+      return sendJson(response, 200, { ok: true, id: license.id, status: license.status });
+    }
+
     const resetDevicesMatch = url.pathname.match(
       /^\/v1\/admin\/licenses\/([0-9a-f-]{36})\/reset-devices$/i,
     );
@@ -240,6 +302,9 @@ export async function createLicenseServer({ adminToken, dataFile = defaultDataFi
     if (request.method === "POST" && url.pathname === "/v1/activate") {
       const { key, deviceId } = requireLicenseInput(await readJsonBody(request));
       const license = database.licenses.find((entry) => entry.keyHash === hashKey(key));
+      if (license?.status === "suspended") {
+        throw new HttpError(403, "LICENSE_SUSPENDED", "License đang tạm khóa.");
+      }
       if (!license || license.status !== "active") {
         throw new HttpError(403, "LICENSE_INVALID", "License không hợp lệ hoặc đã bị thu hồi.");
       }

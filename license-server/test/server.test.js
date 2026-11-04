@@ -139,6 +139,74 @@ test("admin can release a device activation after a device is replaced", async (
   assert.equal(replacementDevice.status, 200);
 });
 
+test("admin can suspend, resume, soft-delete, and restore a license", async () => {
+  const created = await request("/v1/admin/licenses", {
+    method: "POST",
+    admin: true,
+    body: { maxDevices: 1, note: "customer to manage" },
+  });
+  const deviceId = "test-device-00000001";
+  await request("/v1/activate", {
+    method: "POST",
+    body: { key: created.body.key, deviceId },
+  });
+
+  const suspended = await request(
+    `/v1/admin/licenses/${created.body.license.id}/suspend`,
+    { method: "POST", admin: true },
+  );
+  assert.equal(suspended.body.status, "suspended");
+  const deniedWhileSuspended = await request("/v1/verify", {
+    method: "POST",
+    body: { key: created.body.key, deviceId },
+  });
+  assert.equal(deniedWhileSuspended.body.code, "LICENSE_SUSPENDED");
+
+  const resumed = await request(
+    `/v1/admin/licenses/${created.body.license.id}/resume`,
+    { method: "POST", admin: true },
+  );
+  assert.equal(resumed.body.status, "active");
+  assert.equal(
+    (await request("/v1/verify", {
+      method: "POST",
+      body: { key: created.body.key, deviceId },
+    })).body.valid,
+    true,
+  );
+
+  const deleted = await request(
+    `/v1/admin/licenses/${created.body.license.id}/delete`,
+    { method: "POST", admin: true },
+  );
+  assert.equal(deleted.body.status, "deleted");
+  const deniedAfterDelete = await request("/v1/verify", {
+    method: "POST",
+    body: { key: created.body.key, deviceId },
+  });
+  assert.equal(deniedAfterDelete.body.code, "LICENSE_REVOKED");
+
+  const restored = await request(
+    `/v1/admin/licenses/${created.body.license.id}/restore`,
+    { method: "POST", admin: true },
+  );
+  assert.equal(restored.body.status, "active");
+  assert.equal(
+    (await request("/v1/verify", {
+      method: "POST",
+      body: { key: created.body.key, deviceId },
+    })).body.valid,
+    true,
+  );
+});
+
+test("admin dashboard is served with restrictive security headers", async () => {
+  const response = await fetch(`${baseUrl}/admin`);
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get("content-security-policy"), /frame-ancestors 'none'/);
+  assert.match(await response.text(), /Quản lý license/);
+});
+
 test("extension background activates and rechecks a key through the license API", async () => {
   const created = await request("/v1/admin/licenses", {
     method: "POST",
